@@ -18,7 +18,7 @@ ENDCLASS.
 CLASS ltcl_base IMPLEMENTATION.
 
   METHOD setup.
-    me->cut = NEW #( ).
+    me->cut = CAST #( zcl_prometheus=>get_instance( 'ABAPUNIT' ) ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -36,27 +36,28 @@ ENDCLASS.
 CLASS ltcl_write_read_delete IMPLEMENTATION.
 
   METHOD happy_path.
-    CONSTANTS c_abapunit TYPE string VALUE 'ABAPUNIT' ##NO_TEXT.
+    me->cut->write( i_record = VALUE #( key = 'TEST' value = '123456' ) ).
+    me->cut->write( i_record = VALUE #( key = 'test' value = '123000' ) ).
+    cl_abap_unit_assert=>assert_equals( exp = '123000' act = me->cut->read_single( 'TEST' ) ).
 
-    me->cut->write( i_root = c_abapunit i_record = VALUE #( key = 'TEST' value = '123456' ) ).
-    me->cut->write( i_root = c_abapunit i_record = VALUE #( key = 'test' value = '123000' ) ).
-    cl_abap_unit_assert=>assert_equals( exp = '123000' act = me->cut->read_single( i_root = c_abapunit i_key = 'TEST' ) ).
-
-    me->cut->write( i_root = c_abapunit i_record = VALUE #( key = 'TEST2' value = '456789' ) ).
-    me->cut->write( i_root = c_abapunit i_record = VALUE #( key = 'TEST3' value = '789123' ) ).
-    DATA(records) = me->cut->read_all( c_abapunit ).
+    me->cut->write( i_record = VALUE #( key = 'TEST2' value = '456789' ) ).
+    me->cut->write( i_record = VALUE #( key = 'TEST3' value = '789123' ) ).
+    DATA(records) = me->cut->read_all( ).
     cl_abap_unit_assert=>assert_table_not_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test' value = '123456' ) ).
     cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test' value = '123000' ) ).
     cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test2' value = '456789' ) ).
     cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test3' value = '789123' ) ).
 
-    me->cut->delete( i_root = c_abapunit i_key = 'TEST2' ).
-    records = me->cut->read_all( c_abapunit ).
+    me->cut->delete( 'TEST2' ).
+    records = me->cut->read_all( ).
     cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test' value = '123000' ) ).
     cl_abap_unit_assert=>assert_table_not_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test2' value = '456789' ) ).
     cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test3' value = '789123' ) ).
 
-    zcl_shr_prometheus_area=>free_instance( CONV #( c_abapunit ) ).
+    DATA(metric_str) = |# TYPE test gauge\r\ntest 123000\r\n# TYPE test3 gauge\r\ntest3 789123\r\n|.
+    cl_abap_unit_assert=>assert_equals( exp = metric_str act = me->cut->get_metric_string( ) ).
+
+    zcl_shr_prometheus_area=>free_instance( 'ABAPUNIT'  ).
   ENDMETHOD.
 
 ENDCLASS.

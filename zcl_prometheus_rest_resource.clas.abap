@@ -8,27 +8,31 @@ CLASS zcl_prometheus_rest_resource DEFINITION
     CONSTANTS: c_class_name TYPE seoclsname VALUE 'ZCL_PROMETHEUS_REST_RESOURCE'.
 
     METHODS:
+      constructor,
       if_rest_resource~get REDEFINITION.
   PROTECTED SECTION.
   PRIVATE SECTION.
 ENDCLASS.
 
-
-
 CLASS zcl_prometheus_rest_resource IMPLEMENTATION.
 
+  METHOD constructor.
+    super->constructor( ).
+
+  ENDMETHOD.
+
   METHOD if_rest_resource~get.
-*    DATA shr_area TYPE REF TO zcl_shr_prometheus_area.
-*
-*    TRY.
-*        shr_area = zcl_shr_prometheus_area=>attach_for_read( ).
-*        me->mo_response->create_entity( )->set_string_data( shr_area->root->test ).
-*        shr_area->detach( ).
-*        me->mo_response->set_status( cl_rest_status_code=>gc_success_ok ).
-*      CATCH cx_root INTO DATA(x).
-*        me->mo_response->set_status( cl_rest_status_code=>gc_server_error_internal ).
-*        me->mo_response->set_reason( x->get_text( ) ).
-*    ENDTRY.
+    TRY.
+        DATA(segments) = me->mo_request->get_uri_segments( ).
+        DATA(root) = to_upper( segments[ 1 ] ).
+        DATA(prometheus) = zcl_prometheus=>get_instance( to_upper( root ) ).
+        me->mo_response->create_entity( )->set_string_data( prometheus->get_metric_string( ) ).
+        me->mo_response->set_status( cl_rest_status_code=>gc_success_ok ).
+        me->mo_response->set_header_field( iv_name = 'Content-Type' iv_value = if_rest_media_type=>gc_text_plain ).
+      CATCH cx_root INTO DATA(x).
+        me->mo_response->set_status( cl_rest_status_code=>gc_server_error_internal ).
+        me->mo_response->set_reason( x->get_text( ) ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.
