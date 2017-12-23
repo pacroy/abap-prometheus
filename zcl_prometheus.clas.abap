@@ -7,7 +7,8 @@ CLASS zcl_prometheus DEFINITION
     INTERFACES zif_prometheus.
     ALIASES read_all FOR zif_prometheus~read_all.
     ALIASES read_single FOR zif_prometheus~read_single.
-    ALIASES write FOR zif_prometheus~write.
+    ALIASES write_single FOR zif_prometheus~write_single.
+    ALIASES write_multiple FOR zif_prometheus~write_multiple.
     ALIASES delete FOR zif_prometheus~delete.
     ALIASES get_metric_string FOR zif_prometheus~get_metric_string.
     ALIASES increment FOR zif_prometheus~increment.
@@ -39,7 +40,7 @@ ENDCLASS.
 
 
 
-CLASS ZCL_PROMETHEUS IMPLEMENTATION.
+CLASS zcl_prometheus IMPLEMENTATION.
 
 
   METHOD attach_for_read.
@@ -105,9 +106,15 @@ CLASS ZCL_PROMETHEUS IMPLEMENTATION.
 
 
   METHOD zif_prometheus~get_metric_string.
+    DATA current_metrix TYPE string.
     DATA(records) = me->read_all( ).
+    SORT records BY key.
     LOOP AT records ASSIGNING FIELD-SYMBOL(<record>).
-      r_result = r_result && |# TYPE { <record>-key } gauge\r\n|.
+      DATA(metric_name) = substring_before( val = <record>-key sub = '{' ).
+      IF ( metric_name NE current_metrix  ).
+        r_result = r_result && |# TYPE { metric_name } gauge\r\n|.
+        current_metrix = metric_name.
+      ENDIF.
       r_result = r_result && |{ <record>-key } { <record>-value }\r\n|.
     ENDLOOP.
   ENDMETHOD.
@@ -119,7 +126,7 @@ CLASS ZCL_PROMETHEUS IMPLEMENTATION.
         value = me->read_single( i_key ).
       CATCH cx_root INTO DATA(x).
     ENDTRY.
-    me->write( i_record = VALUE #( key = i_key value = value + 1 ) ).
+    me->write_single( i_record = VALUE #( key = i_key value = value + 1 ) ).
   ENDMETHOD.
 
 
@@ -144,7 +151,28 @@ CLASS ZCL_PROMETHEUS IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_prometheus~write.
+  METHOD zif_prometheus~write_multiple.
+    DATA: shr_area TYPE REF TO zcl_shr_prometheus_area,
+          shr_root TYPE REF TO zcl_shr_prometheus_root.
+
+    shr_area = attach_for_update( ).
+    shr_root = CAST #( shr_area->get_root( ) ).
+
+    LOOP AT i_record_table ASSIGNING FIELD-SYMBOL(<record>).
+      DATA(key) = to_lower( <record>-key ).
+
+      IF line_exists( shr_root->data[ key = key ] ).
+        shr_root->data[ key = key ]-value = <record>-value.
+      ELSE.
+        APPEND VALUE #( key = key value = <record>-value ) TO shr_root->data.
+      ENDIF.
+    ENDLOOP.
+
+    shr_area->detach_commit( ).
+  ENDMETHOD.
+
+
+  METHOD zif_prometheus~write_single.
     DATA: shr_area TYPE REF TO zcl_shr_prometheus_area,
           shr_root TYPE REF TO zcl_shr_prometheus_root.
     DATA(key) = to_lower( i_record-key ).
@@ -158,4 +186,7 @@ CLASS ZCL_PROMETHEUS IMPLEMENTATION.
     ENDIF.
     shr_area->detach_commit( ).
   ENDMETHOD.
+
+
+
 ENDCLASS.
