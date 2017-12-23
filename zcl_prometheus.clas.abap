@@ -35,7 +35,12 @@ CLASS zcl_prometheus DEFINITION
       attach_for_read
         RETURNING VALUE(r_result) TYPE REF TO zcl_shr_prometheus_area
         RAISING
-                  cx_shm_attach_error.
+                  cx_shm_attach_error,
+      get_metric_name
+        IMPORTING
+          i_key           TYPE string
+        RETURNING
+          VALUE(r_result) TYPE string.
 ENDCLASS.
 
 
@@ -110,12 +115,11 @@ CLASS zcl_prometheus IMPLEMENTATION.
     DATA(records) = me->read_all( ).
     SORT records BY key.
     LOOP AT records ASSIGNING FIELD-SYMBOL(<record>).
-      DATA(metric_name) = substring_before( val = <record>-key sub = '{' ).
+      DATA(metric_name) = get_metric_name( <record>-key ).
       IF ( metric_name NE current_metrix  ).
-        r_result = r_result && |# TYPE { metric_name } gauge\r\n|.
         current_metrix = metric_name.
       ENDIF.
-      r_result = r_result && |{ <record>-key } { <record>-value }\r\n|.
+      r_result = r_result && |{ <record>-key } { condense( <record>-value ) }\r\n|.
     ENDLOOP.
   ENDMETHOD.
 
@@ -188,5 +192,11 @@ CLASS zcl_prometheus IMPLEMENTATION.
   ENDMETHOD.
 
 
+
+
+  METHOD get_metric_name.
+    r_result = substring_before( val = i_key sub = '{' ).
+    IF ( r_result IS INITIAL ). r_result = i_key. ENDIF.
+  ENDMETHOD.
 
 ENDCLASS.

@@ -62,15 +62,17 @@ CLASS ltcl_write_read_delete IMPLEMENTATION.
     cl_abap_unit_assert=>assert_table_not_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="2"}' value = '456789' ) ).
     cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="3"}' value = '789123' ) ).
 
-    DATA(metric_str) = |# TYPE test gauge\r\ntest\{id="1"\} 123000\r\ntest\{id="3"\} 789123\r\n|.
+    DATA(metric_str) = |test\{id="1"\} 123000\r\ntest\{id="3"\} 789123\r\n|.
     cl_abap_unit_assert=>assert_equals( exp = metric_str act = me->cut->get_metric_string( ) ).
   ENDMETHOD.
 
   METHOD increment.
-    me->cut->increment( 'INCREMENT' ).
-    cl_abap_unit_assert=>assert_equals( exp = 1 act = me->cut->read_single( 'INCREMENT' ) ).
-    me->cut->increment( 'INCREMENT' ).
-    cl_abap_unit_assert=>assert_equals( exp = 2 act = me->cut->read_single( 'INCREMENT' ) ).
+    me->cut->increment( 'test_count' ).
+    cl_abap_unit_assert=>assert_equals( exp = 1 act = me->cut->read_single( 'test_count' ) ).
+    me->cut->increment( 'test_count' ).
+    cl_abap_unit_assert=>assert_equals( exp = 2 act = me->cut->read_single( 'test_count' ) ).
+    DATA(metric_str) = |test_count 2\r\n|.
+    cl_abap_unit_assert=>assert_equals( exp = metric_str act = me->cut->get_metric_string( ) ).
   ENDMETHOD.
 
 ENDCLASS.
