@@ -10,11 +10,15 @@ CLASS zcl_prometheus DEFINITION
     ALIASES write FOR zif_prometheus~write.
     ALIASES delete FOR zif_prometheus~delete.
     ALIASES get_metric_string FOR zif_prometheus~get_metric_string.
+    ALIASES increment FOR zif_prometheus~increment.
 
     CLASS-METHODS:
       class_constructor,
       get_instance
         IMPORTING i_root          TYPE string OPTIONAL
+        RETURNING VALUE(r_result) TYPE REF TO zif_prometheus,
+      get_instance_from_rest_request
+        IMPORTING i_request       TYPE REF TO if_rest_request
         RETURNING VALUE(r_result) TYPE REF TO zif_prometheus.
 
   PROTECTED SECTION.
@@ -35,26 +39,29 @@ ENDCLASS.
 
 
 
-CLASS zcl_prometheus IMPLEMENTATION.
+CLASS ZCL_PROMETHEUS IMPLEMENTATION.
+
+
+  METHOD attach_for_read.
+    TRY.
+        r_result = zcl_shr_prometheus_area=>attach_for_read( inst_name = CONV #( me->root ) ).
+      CATCH cx_shm_no_active_version.
+        WAIT UP TO 1 SECONDS.
+        r_result = zcl_shr_prometheus_area=>attach_for_read( inst_name = CONV #( me->root ) ).
+    ENDTRY.
+  ENDMETHOD.
+
 
   METHOD attach_for_update.
     DATA wait TYPE i.
     TRY.
         r_result = zcl_shr_prometheus_area=>attach_for_update( inst_name = CONV #( me->root ) ).
-      CATCH BEFORE UNWIND cx_shm_no_active_version.
+      CATCH cx_shm_no_active_version.
         WAIT UP TO 1 SECONDS.
         r_result = zcl_shr_prometheus_area=>attach_for_update( inst_name = CONV #( me->root ) ).
     ENDTRY.
   ENDMETHOD.
 
-  METHOD attach_for_read.
-    TRY.
-        r_result = zcl_shr_prometheus_area=>attach_for_read( inst_name = CONV #( me->root ) ).
-      CATCH BEFORE UNWIND cx_shm_no_active_version.
-        WAIT UP TO 1 SECONDS.
-        r_result = zcl_shr_prometheus_area=>attach_for_read( inst_name = CONV #( me->root ) ).
-    ENDTRY.
-  ENDMETHOD.
 
   METHOD class_constructor.
     instance = NEW #( ).
@@ -64,6 +71,17 @@ CLASS zcl_prometheus IMPLEMENTATION.
   METHOD get_instance.
     IF ( i_root IS NOT INITIAL ).
       instance->root = i_root.
+    ELSE.
+      instance->root = cl_shm_area=>default_instance.
+    ENDIF.
+    r_result = instance.
+  ENDMETHOD.
+
+
+  METHOD get_instance_from_rest_request.
+    IF ( i_request IS BOUND ).
+      DATA(segments) = i_request->get_uri_segments( ).
+      instance->root = to_upper( segments[ 1 ] ).
     ELSE.
       instance->root = cl_shm_area=>default_instance.
     ENDIF.
@@ -92,6 +110,16 @@ CLASS zcl_prometheus IMPLEMENTATION.
       r_result = r_result && |# TYPE { <record>-key } gauge\r\n|.
       r_result = r_result && |{ <record>-key } { <record>-value }\r\n|.
     ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD zif_prometheus~increment.
+    DATA value TYPE i.
+    TRY.
+        value = me->read_single( i_key ).
+      CATCH cx_root INTO DATA(x).
+    ENDTRY.
+    me->write( i_record = VALUE #( key = i_key value = value + 1 ) ).
   ENDMETHOD.
 
 
@@ -130,5 +158,4 @@ CLASS zcl_prometheus IMPLEMENTATION.
     ENDIF.
     shr_area->detach_commit( ).
   ENDMETHOD.
-
 ENDCLASS.

@@ -23,9 +23,7 @@ CLASS zcl_prometheus_rest_resource IMPLEMENTATION.
 
   METHOD if_rest_resource~get.
     TRY.
-        DATA(segments) = me->mo_request->get_uri_segments( ).
-        DATA(root) = to_upper( segments[ 1 ] ).
-        DATA(prometheus) = zcl_prometheus=>get_instance( to_upper( root ) ).
+        DATA(prometheus) = zcl_prometheus=>get_instance_from_rest_request( me->mo_request ).
         me->mo_response->create_entity( )->set_string_data( prometheus->get_metric_string( ) ).
         me->mo_response->set_status( cl_rest_status_code=>gc_success_ok ).
         me->mo_response->set_header_field( iv_name = 'Content-Type' iv_value = if_rest_media_type=>gc_text_plain ).

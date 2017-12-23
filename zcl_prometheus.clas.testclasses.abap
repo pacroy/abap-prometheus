@@ -12,13 +12,18 @@ CLASS ltcl_base DEFINITION FOR TESTING
     DATA: cut  TYPE REF TO zcl_prometheus.
   PRIVATE SECTION.
     METHODS:
-      setup.
+      setup,
+      teardown.
 ENDCLASS.
 
 CLASS ltcl_base IMPLEMENTATION.
 
   METHOD setup.
     me->cut = CAST #( zcl_prometheus=>get_instance( 'ABAPUNIT' ) ).
+  ENDMETHOD.
+
+  METHOD teardown.
+    zcl_shr_prometheus_area=>free_instance( 'ABAPUNIT'  ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -29,7 +34,8 @@ CLASS ltcl_write_read_delete DEFINITION FINAL INHERITING FROM ltcl_base FOR TEST
 
   PRIVATE SECTION.
     METHODS:
-      happy_path FOR TESTING RAISING cx_static_check.
+      happy_path FOR TESTING RAISING cx_static_check,
+      increment FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 
@@ -56,8 +62,13 @@ CLASS ltcl_write_read_delete IMPLEMENTATION.
 
     DATA(metric_str) = |# TYPE test gauge\r\ntest 123000\r\n# TYPE test3 gauge\r\ntest3 789123\r\n|.
     cl_abap_unit_assert=>assert_equals( exp = metric_str act = me->cut->get_metric_string( ) ).
+  ENDMETHOD.
 
-    zcl_shr_prometheus_area=>free_instance( 'ABAPUNIT'  ).
+  METHOD increment.
+    me->cut->increment( 'INCREMENT' ).
+    cl_abap_unit_assert=>assert_equals( exp = 1 act = me->cut->read_single( 'INCREMENT' ) ).
+    me->cut->increment( 'INCREMENT' ).
+    cl_abap_unit_assert=>assert_equals( exp = 2 act = me->cut->read_single( 'INCREMENT' ) ).
   ENDMETHOD.
 
 ENDCLASS.
