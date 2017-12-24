@@ -4,7 +4,7 @@ INTERFACE zif_prometheus
            key   TYPE string,
            value TYPE string,
          END OF t_record,
-         t_record_table TYPE STANDARD TABLE OF t_record WITH KEY key.
+         t_record_table TYPE SORTED TABLE OF t_record WITH UNIQUE KEY primary_key COMPONENTS key.
 
   METHODS:
     read_all

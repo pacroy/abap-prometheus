@@ -40,16 +40,16 @@ CLASS zcl_prometheus DEFINITION
           i_key           TYPE string
         RETURNING
           VALUE(r_result) TYPE string,
-    update_or_append
-      IMPORTING
-        I_RECORD TYPE ZIF_PROMETHEUS=>T_RECORD
-      changing
-        c_data   TYPE zif_prometheus=>t_record_table.
+      update_or_append
+        IMPORTING
+          i_record TYPE zif_prometheus=>t_record
+        CHANGING
+          c_data   TYPE zif_prometheus=>t_record_table.
 ENDCLASS.
 
 
 
-CLASS ZCL_PROMETHEUS IMPLEMENTATION.
+CLASS zcl_prometheus IMPLEMENTATION.
 
 
   METHOD attach_for_read.
@@ -131,14 +131,8 @@ CLASS ZCL_PROMETHEUS IMPLEMENTATION.
 
 
   METHOD zif_prometheus~get_metric_string.
-    DATA current_metrix TYPE string.
     DATA(records) = me->read_all( ).
-    SORT records BY key.
     LOOP AT records ASSIGNING FIELD-SYMBOL(<record>).
-      DATA(metric_name) = get_metric_name( <record>-key ).
-      IF ( metric_name NE current_metrix  ).
-        current_metrix = metric_name.
-      ENDIF.
       r_result = r_result && |{ <record>-key } { condense( <record>-value ) }\r\n|.
     ENDLOOP.
   ENDMETHOD.
