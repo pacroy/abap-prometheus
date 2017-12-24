@@ -39,12 +39,17 @@ CLASS zcl_prometheus DEFINITION
         IMPORTING
           i_key           TYPE string
         RETURNING
-          VALUE(r_result) TYPE string.
+          VALUE(r_result) TYPE string,
+    update_or_append
+      IMPORTING
+        I_RECORD TYPE ZIF_PROMETHEUS=>T_RECORD
+      changing
+        c_data   TYPE zif_prometheus=>t_record_table.
 ENDCLASS.
 
 
 
-CLASS zcl_prometheus IMPLEMENTATION.
+CLASS ZCL_PROMETHEUS IMPLEMENTATION.
 
 
   METHOD attach_for_read.
@@ -91,6 +96,22 @@ CLASS zcl_prometheus IMPLEMENTATION.
       instance->root = cl_shm_area=>default_instance.
     ENDIF.
     r_result = instance.
+  ENDMETHOD.
+
+
+  METHOD get_metric_name.
+    r_result = substring_before( val = i_key sub = '{' ).
+    IF ( r_result IS INITIAL ). r_result = i_key. ENDIF.
+  ENDMETHOD.
+
+
+  METHOD update_or_append.
+    DATA(key) = to_lower( i_record-key ).
+    IF line_exists( c_data[ key = key ] ).
+      c_data[ key = key ]-value = i_record-value.
+    ELSE.
+      APPEND VALUE #( key = key value = i_record-value ) TO c_data.
+    ENDIF.
   ENDMETHOD.
 
 
@@ -152,13 +173,7 @@ CLASS zcl_prometheus IMPLEMENTATION.
     shr_root = CAST #( shr_area->get_root( ) ).
 
     LOOP AT i_record_table ASSIGNING FIELD-SYMBOL(<record>).
-      DATA(key) = to_lower( <record>-key ).
-
-      IF line_exists( shr_root->data[ key = key ] ).
-        shr_root->data[ key = key ]-value = <record>-value.
-      ELSE.
-        APPEND VALUE #( key = key value = <record>-value ) TO shr_root->data.
-      ENDIF.
+      me->update_or_append( EXPORTING i_record = <record>  CHANGING c_data = shr_root->data ).
     ENDLOOP.
 
     shr_area->detach_commit( ).
@@ -168,24 +183,11 @@ CLASS zcl_prometheus IMPLEMENTATION.
   METHOD zif_prometheus~write_single.
     DATA: shr_area TYPE REF TO zcl_shr_prometheus_area,
           shr_root TYPE REF TO zcl_shr_prometheus_root.
-    DATA(key) = to_lower( i_record-key ).
 
     shr_area = attach_for_update( ).
     shr_root = CAST #( shr_area->get_root( ) ).
-    IF line_exists( shr_root->data[ key = key ] ).
-      shr_root->data[ key = key ]-value = i_record-value.
-    ELSE.
-      APPEND VALUE #( key = key value = i_record-value ) TO shr_root->data.
-    ENDIF.
+
+    me->update_or_append( EXPORTING i_record = i_record  CHANGING c_data = shr_root->data ).
     shr_area->detach_commit( ).
   ENDMETHOD.
-
-
-
-
-  METHOD get_metric_name.
-    r_result = substring_before( val = i_key sub = '{' ).
-    IF ( r_result IS INITIAL ). r_result = i_key. ENDIF.
-  ENDMETHOD.
-
 ENDCLASS.
