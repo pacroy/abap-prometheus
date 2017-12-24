@@ -11,7 +11,6 @@ CLASS zcl_prometheus DEFINITION
     ALIASES write_multiple FOR zif_prometheus~write_multiple.
     ALIASES delete FOR zif_prometheus~delete.
     ALIASES get_metric_string FOR zif_prometheus~get_metric_string.
-    ALIASES increment FOR zif_prometheus~increment.
 
     CLASS-METHODS:
       class_constructor,
@@ -121,16 +120,6 @@ CLASS zcl_prometheus IMPLEMENTATION.
       ENDIF.
       r_result = r_result && |{ <record>-key } { condense( <record>-value ) }\r\n|.
     ENDLOOP.
-  ENDMETHOD.
-
-
-  METHOD zif_prometheus~increment.
-    DATA value TYPE i.
-    TRY.
-        value = me->read_single( i_key ).
-      CATCH cx_root INTO DATA(x).
-    ENDTRY.
-    me->write_single( i_record = VALUE #( key = i_key value = value + 1 ) ).
   ENDMETHOD.
 
 

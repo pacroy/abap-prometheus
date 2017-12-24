@@ -18,13 +18,18 @@ INTERFACE zif_prometheus
       RAISING
                 cx_shm_attach_error,
 
-    write
+    write_single
       IMPORTING i_record TYPE t_record
       RAISING
                 cx_shm_attach_error,
 
+    write_multiple
+      IMPORTING i_record_table TYPE t_record_table
+      RAISING
+                cx_shm_attach_error,
+
     delete
-      IMPORTING i_key  TYPE string
+      IMPORTING i_key TYPE string
       RAISING
                 cx_shm_attach_error,
 
