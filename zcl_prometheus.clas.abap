@@ -19,7 +19,7 @@ CLASS zcl_prometheus DEFINITION
       set_instance_name
         IMPORTING i_instance_name TYPE string OPTIONAL,
       set_instance_name_from_request
-        IMPORTING i_request       TYPE REF TO if_rest_request.
+        IMPORTING i_request TYPE REF TO if_rest_request.
 
   PROTECTED SECTION.
   PRIVATE SECTION.
@@ -38,9 +38,9 @@ CLASS zcl_prometheus DEFINITION
                   cx_shm_attach_error,
       update_or_append
         IMPORTING
-          i_record TYPE zif_prometheus=>t_record
+          i_modify_record TYPE zif_prometheus=>t_modify_record
         CHANGING
-          c_data   TYPE zif_prometheus=>t_record_table,
+          c_data          TYPE zif_prometheus=>t_record_table,
       detach
         IMPORTING
           i_shr_area TYPE REF TO zcl_shr_prometheus_area
@@ -53,7 +53,7 @@ ENDCLASS.
 
 
 
-CLASS ZCL_PROMETHEUS IMPLEMENTATION.
+CLASS zcl_prometheus IMPLEMENTATION.
 
 
   METHOD attach_for_read.
@@ -111,26 +111,27 @@ CLASS ZCL_PROMETHEUS IMPLEMENTATION.
 
 
   METHOD update_or_append.
-    DATA(key) = to_lower( i_record-key ).
+    DATA(key) = to_lower( i_modify_record-key ).
     IF line_exists( c_data[ key = key ] ).
       FIELD-SYMBOLS <current_value> TYPE string.
       ASSIGN c_data[ key = key ]-value TO <current_value>.
       TRY.
-          CASE i_record-value.
-            WHEN '$INC'.  "Increment
-              <current_value> = <current_value> + 1.
+          CASE i_modify_record-command.
+            WHEN zif_prometheus=>c_command-increment.
+              <current_value> = <current_value> + i_modify_record-value.
             WHEN OTHERS.
-              <current_value> = i_record-value.
+              <current_value> = i_modify_record-value.
           ENDCASE.
           <current_value> = condense( <current_value> ).
         CATCH cx_root.
       ENDTRY.
     ELSE.
-      IF ( i_record-value = '$INC' ).
-        APPEND VALUE #( key = key value = '1' ) TO c_data.
-      ELSE.
-        APPEND VALUE #( key = key value = condense( i_record-value ) ) TO c_data.
-      ENDIF.
+      CASE i_modify_record-command.
+        WHEN zif_prometheus=>c_command-increment.
+          APPEND VALUE #( key = key value = '1' ) TO c_data.
+        WHEN OTHERS.
+          APPEND VALUE #( key = key value = condense( i_modify_record-value ) ) TO c_data.
+      ENDCASE.
       SORT c_data BY key.
     ENDIF.
   ENDMETHOD.
@@ -188,7 +189,7 @@ CLASS ZCL_PROMETHEUS IMPLEMENTATION.
     shr_root = CAST #( shr_area->get_root( ) ).
 
     LOOP AT i_record_table ASSIGNING FIELD-SYMBOL(<record>).
-      update_or_append( EXPORTING i_record = <record>  CHANGING c_data = shr_root->data ).
+      update_or_append( EXPORTING i_modify_record = <record>  CHANGING c_data = shr_root->data ).
     ENDLOOP.
 
     detach( shr_area ).
@@ -202,7 +203,7 @@ CLASS ZCL_PROMETHEUS IMPLEMENTATION.
     shr_area = attach_for_update( ).
     shr_root = CAST #( shr_area->get_root( ) ).
 
-    update_or_append( EXPORTING i_record = i_record  CHANGING c_data = shr_root->data ).
+    update_or_append( EXPORTING i_modify_record = i_record  CHANGING c_data = shr_root->data ).
     detach( shr_area ).
   ENDMETHOD.
 ENDCLASS.

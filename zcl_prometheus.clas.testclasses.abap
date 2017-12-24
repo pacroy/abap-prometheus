@@ -66,10 +66,10 @@ CLASS ltcl_write_read_delete IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD increment.
-    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST' value = '$INC' ) ).
+    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST' value = '1' command = zif_prometheus=>c_command-increment ) ).
     cl_abap_unit_assert=>assert_equals( exp = '1' act = zcl_prometheus=>read_single( 'TEST' ) ).
-    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST' value = '$INC' ) ).
-    cl_abap_unit_assert=>assert_equals( exp = '2' act = zcl_prometheus=>read_single( 'TEST' ) ).
+    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST' value = '2' command = zif_prometheus=>c_command-increment ) ).
+    cl_abap_unit_assert=>assert_equals( exp = '3' act = zcl_prometheus=>read_single( 'TEST' ) ).
   ENDMETHOD.
 
   METHOD test_mode.
@@ -77,7 +77,7 @@ CLASS ltcl_write_read_delete IMPLEMENTATION.
 
     zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST' value = '5' ) ).
     cl_abap_unit_assert=>assert_equals( exp = space act = zcl_prometheus=>read_single( 'TEST' ) ).
-    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST' value = '$INC' ) ).
+    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST' value = '1' command = zif_prometheus=>c_command-increment ) ).
     cl_abap_unit_assert=>assert_equals( exp = space act = zcl_prometheus=>read_single( 'TEST' ) ).
 
     zcl_prometheus=>test_mode = abap_false.
