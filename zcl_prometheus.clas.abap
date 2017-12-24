@@ -35,11 +35,6 @@ CLASS zcl_prometheus DEFINITION
         RETURNING VALUE(r_result) TYPE REF TO zcl_shr_prometheus_area
         RAISING
                   cx_shm_attach_error,
-      get_metric_name
-        IMPORTING
-          i_key           TYPE string
-        RETURNING
-          VALUE(r_result) TYPE string,
       update_or_append
         IMPORTING
           i_record TYPE zif_prometheus=>t_record
@@ -99,18 +94,27 @@ CLASS zcl_prometheus IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD get_metric_name.
-    r_result = substring_before( val = i_key sub = '{' ).
-    IF ( r_result IS INITIAL ). r_result = i_key. ENDIF.
-  ENDMETHOD.
-
-
   METHOD update_or_append.
     DATA(key) = to_lower( i_record-key ).
     IF line_exists( c_data[ key = key ] ).
-      c_data[ key = key ]-value = i_record-value.
+      FIELD-SYMBOLS <current_value> TYPE string.
+      ASSIGN c_data[ key = key ]-value TO <current_value>.
+      TRY.
+          CASE i_record-value.
+            WHEN '$INC'.  "Increment
+              <current_value> = <current_value> + 1.
+            WHEN OTHERS.
+              <current_value> = i_record-value.
+          ENDCASE.
+          <current_value> = condense( <current_value> ).
+        CATCH cx_root.
+      ENDTRY.
     ELSE.
-      APPEND VALUE #( key = key value = i_record-value ) TO c_data.
+      IF ( i_record-value = '$INC' ).
+        APPEND VALUE #( key = key value = '1' ) TO c_data.
+      ELSE.
+        APPEND VALUE #( key = key value = condense( i_record-value ) ) TO c_data.
+      ENDIF.
     ENDIF.
   ENDMETHOD.
 
@@ -133,7 +137,7 @@ CLASS zcl_prometheus IMPLEMENTATION.
   METHOD zif_prometheus~get_metric_string.
     DATA(records) = me->read_all( ).
     LOOP AT records ASSIGNING FIELD-SYMBOL(<record>).
-      r_result = r_result && |{ <record>-key } { condense( <record>-value ) }\r\n|.
+      r_result = r_result && |{ <record>-key } { <record>-value }\r\n|.
     ENDLOOP.
   ENDMETHOD.
 
