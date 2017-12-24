@@ -9,7 +9,6 @@ CLASS ltcl_base DEFINITION FOR TESTING
 
   PUBLIC SECTION.
   PROTECTED SECTION.
-    DATA: cut  TYPE REF TO zcl_prometheus.
   PRIVATE SECTION.
     METHODS:
       setup,
@@ -19,7 +18,7 @@ ENDCLASS.
 CLASS ltcl_base IMPLEMENTATION.
 
   METHOD setup.
-    me->cut = CAST #( zcl_prometheus=>get_instance( 'ABAPUNIT' ) ).
+    zcl_prometheus=>set_instance_name( 'ABAPUNIT' ).
   ENDMETHOD.
 
   METHOD teardown.
@@ -36,51 +35,62 @@ CLASS ltcl_write_read_delete DEFINITION FINAL INHERITING FROM ltcl_base FOR TEST
     METHODS:
       happy_path FOR TESTING RAISING cx_static_check,
       increment FOR TESTING RAISING cx_static_check,
-      test_mode FOR TESTING RAISING cx_static_check.
+      test_mode FOR TESTING RAISING cx_static_check,
+      set_instance_name_from_request FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 
 CLASS ltcl_write_read_delete IMPLEMENTATION.
 
   METHOD happy_path.
-    me->cut->write_single( i_record = VALUE #( key = 'TEST{id="1"}' value = '123456' ) ).
-    me->cut->write_single( i_record = VALUE #( key = 'test{id="1"}' value = '123000' ) ).
-    cl_abap_unit_assert=>assert_equals( exp = '123000' act = me->cut->read_single( 'TEST{id="1"}' ) ).
+    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST{id="1"}' value = '123456' ) ).
+    zcl_prometheus=>write_single( i_record = VALUE #( key = 'test{id="1"}' value = '123000' ) ).
+    cl_abap_unit_assert=>assert_equals( exp = '123000' act = zcl_prometheus=>read_single( 'TEST{id="1"}' ) ).
 
-    me->cut->write_multiple( VALUE #( ( key = 'TEST{id="2"}' value = '456789' )
+    zcl_prometheus=>write_multiple( VALUE #( ( key = 'TEST{id="2"}' value = '456789' )
                                       ( key = 'TEST{id="3"}' value = '789123' ) ) ).
-    DATA(records) = me->cut->read_all( ).
+    DATA(records) = zcl_prometheus=>read_all( ).
     cl_abap_unit_assert=>assert_table_not_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="1"}' value = '123456' ) ).
     cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="1"}' value = '123000' ) ).
     cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="2"}' value = '456789' ) ).
     cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="3"}' value = '789123' ) ).
 
-    me->cut->delete( 'test{id="2"}' ).
-    records = me->cut->read_all( ).
+    zcl_prometheus=>delete( 'test{id="2"}' ).
+    records = zcl_prometheus=>read_all( ).
     cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="1"}' value = '123000' ) ).
     cl_abap_unit_assert=>assert_table_not_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="2"}' value = '456789' ) ).
     cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="3"}' value = '789123' ) ).
 
     DATA(metric_str) = |test\{id="1"\} 123000\r\ntest\{id="3"\} 789123\r\n|.
-    cl_abap_unit_assert=>assert_equals( exp = metric_str act = me->cut->get_metric_string( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = metric_str act = zcl_prometheus=>get_metric_string( ) ).
   ENDMETHOD.
 
   METHOD increment.
-    me->cut->write_single( i_record = VALUE #( key = 'TEST' value = '$INC' ) ).
-    cl_abap_unit_assert=>assert_equals( exp = '1' act = me->cut->read_single( 'TEST' ) ).
-    me->cut->write_single( i_record = VALUE #( key = 'TEST' value = '$INC' ) ).
-    cl_abap_unit_assert=>assert_equals( exp = '2' act = me->cut->read_single( 'TEST' ) ).
+    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST' value = '$INC' ) ).
+    cl_abap_unit_assert=>assert_equals( exp = '1' act = zcl_prometheus=>read_single( 'TEST' ) ).
+    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST' value = '$INC' ) ).
+    cl_abap_unit_assert=>assert_equals( exp = '2' act = zcl_prometheus=>read_single( 'TEST' ) ).
   ENDMETHOD.
 
   METHOD test_mode.
     zcl_prometheus=>test_mode = abap_true.
 
-    me->cut->write_single( i_record = VALUE #( key = 'TEST' value = '5' ) ).
-    cl_abap_unit_assert=>assert_equals( exp = space act = me->cut->read_single( 'TEST' ) ).
-    me->cut->write_single( i_record = VALUE #( key = 'TEST' value = '$INC' ) ).
-    cl_abap_unit_assert=>assert_equals( exp = space act = me->cut->read_single( 'TEST' ) ).
+    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST' value = '5' ) ).
+    cl_abap_unit_assert=>assert_equals( exp = space act = zcl_prometheus=>read_single( 'TEST' ) ).
+    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST' value = '$INC' ) ).
+    cl_abap_unit_assert=>assert_equals( exp = space act = zcl_prometheus=>read_single( 'TEST' ) ).
 
     zcl_prometheus=>test_mode = abap_false.
+  ENDMETHOD.
+
+  METHOD set_instance_name_from_request.
+    DATA(rest_request) = CAST if_rest_request( cl_abap_testdouble=>create( 'IF_REST_REQUEST' ) ) ##NO_TEXT.
+    cl_abap_testdouble=>configure_call( rest_request )->returning( VALUE string_table( ( `FIRST` ) ( `SECOND` ) ( `THIRD` ) ) ).
+    rest_request->get_uri_segments( ).
+
+    zcl_prometheus=>set_instance_name_from_request( rest_request ).
+
+    cl_abap_unit_assert=>assert_equals( exp = 'FIRST' act = zcl_prometheus=>instance->instance_name ).
   ENDMETHOD.
 
 ENDCLASS.

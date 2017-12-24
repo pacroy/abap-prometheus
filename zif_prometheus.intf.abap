@@ -6,7 +6,7 @@ INTERFACE zif_prometheus
          END OF t_record,
          t_record_table TYPE STANDARD TABLE OF t_record WITH KEY key.
 
-  METHODS:
+  CLASS-METHODS:
     read_all
       RETURNING VALUE(r_result) TYPE t_record_table
       RAISING

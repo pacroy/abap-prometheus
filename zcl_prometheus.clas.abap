@@ -16,12 +16,10 @@ CLASS zcl_prometheus DEFINITION
 
     CLASS-METHODS:
       class_constructor,
-      get_instance
-        IMPORTING i_instance_name          TYPE string OPTIONAL
-        RETURNING VALUE(r_result) TYPE REF TO zif_prometheus,
-      get_instance_from_rest_request
-        IMPORTING i_request       TYPE REF TO if_rest_request
-        RETURNING VALUE(r_result) TYPE REF TO zif_prometheus.
+      set_instance_name
+        IMPORTING i_instance_name TYPE string OPTIONAL,
+      set_instance_name_from_request
+        IMPORTING i_request       TYPE REF TO if_rest_request.
 
   PROTECTED SECTION.
   PRIVATE SECTION.
@@ -29,10 +27,11 @@ CLASS zcl_prometheus DEFINITION
 
     DATA: instance_name TYPE string.
 
-    METHODS: attach_for_update
-      RETURNING VALUE(r_result) TYPE REF TO zcl_shr_prometheus_area
-      RAISING
-                cx_shm_attach_error,
+    CLASS-METHODS:
+      attach_for_update
+        RETURNING VALUE(r_result) TYPE REF TO zcl_shr_prometheus_area
+        RAISING
+                  cx_shm_attach_error,
       attach_for_read
         RETURNING VALUE(r_result) TYPE REF TO zcl_shr_prometheus_area
         RAISING
@@ -54,15 +53,15 @@ ENDCLASS.
 
 
 
-CLASS zcl_prometheus IMPLEMENTATION.
+CLASS ZCL_PROMETHEUS IMPLEMENTATION.
 
 
   METHOD attach_for_read.
     TRY.
-        r_result = zcl_shr_prometheus_area=>attach_for_read( inst_name = CONV #( me->instance_name ) ).
+        r_result = zcl_shr_prometheus_area=>attach_for_read( inst_name = CONV #( instance->instance_name ) ).
       CATCH cx_shm_no_active_version.
         WAIT UP TO 1 SECONDS.
-        r_result = zcl_shr_prometheus_area=>attach_for_read( inst_name = CONV #( me->instance_name ) ).
+        r_result = zcl_shr_prometheus_area=>attach_for_read( inst_name = CONV #( instance->instance_name ) ).
     ENDTRY.
   ENDMETHOD.
 
@@ -70,10 +69,10 @@ CLASS zcl_prometheus IMPLEMENTATION.
   METHOD attach_for_update.
     DATA wait TYPE i.
     TRY.
-        r_result = zcl_shr_prometheus_area=>attach_for_update( inst_name = CONV #( me->instance_name ) ).
+        r_result = zcl_shr_prometheus_area=>attach_for_update( inst_name = CONV #( instance->instance_name ) ).
       CATCH cx_shm_no_active_version.
         WAIT UP TO 1 SECONDS.
-        r_result = zcl_shr_prometheus_area=>attach_for_update( inst_name = CONV #( me->instance_name ) ).
+        r_result = zcl_shr_prometheus_area=>attach_for_update( inst_name = CONV #( instance->instance_name ) ).
     ENDTRY.
   ENDMETHOD.
 
@@ -83,24 +82,31 @@ CLASS zcl_prometheus IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD get_instance.
+  METHOD detach.
+    IF ( test_mode = abap_true ).
+      i_shr_area->detach_rollback( ).
+    ELSE.
+      i_shr_area->detach_commit( ).
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD set_instance_name.
     IF ( i_instance_name IS NOT INITIAL ).
       instance->instance_name = i_instance_name.
     ELSE.
       instance->instance_name = cl_shm_area=>default_instance.
     ENDIF.
-    r_result = instance.
   ENDMETHOD.
 
 
-  METHOD get_instance_from_rest_request.
+  METHOD set_instance_name_from_request.
     IF ( i_request IS BOUND ).
       DATA(segments) = i_request->get_uri_segments( ).
       instance->instance_name = to_upper( segments[ 1 ] ).
     ELSE.
       instance->instance_name = cl_shm_area=>default_instance.
     ENDIF.
-    r_result = instance.
   ENDMETHOD.
 
 
@@ -146,7 +152,7 @@ CLASS zcl_prometheus IMPLEMENTATION.
 
 
   METHOD zif_prometheus~get_metric_string.
-    DATA(records) = me->read_all( ).
+    DATA(records) = read_all( ).
     LOOP AT records ASSIGNING FIELD-SYMBOL(<record>).
       r_result = r_result && |{ <record>-key } { <record>-value }\r\n|.
     ENDLOOP.
@@ -182,7 +188,7 @@ CLASS zcl_prometheus IMPLEMENTATION.
     shr_root = CAST #( shr_area->get_root( ) ).
 
     LOOP AT i_record_table ASSIGNING FIELD-SYMBOL(<record>).
-      me->update_or_append( EXPORTING i_record = <record>  CHANGING c_data = shr_root->data ).
+      update_or_append( EXPORTING i_record = <record>  CHANGING c_data = shr_root->data ).
     ENDLOOP.
 
     detach( shr_area ).
@@ -196,16 +202,7 @@ CLASS zcl_prometheus IMPLEMENTATION.
     shr_area = attach_for_update( ).
     shr_root = CAST #( shr_area->get_root( ) ).
 
-    me->update_or_append( EXPORTING i_record = i_record  CHANGING c_data = shr_root->data ).
+    update_or_append( EXPORTING i_record = i_record  CHANGING c_data = shr_root->data ).
     detach( shr_area ).
   ENDMETHOD.
-
-  METHOD detach.
-    IF ( test_mode = abap_true ).
-      i_shr_area->detach_rollback( ).
-    ELSE.
-      i_shr_area->detach_commit( ).
-    ENDIF.
-  ENDMETHOD.
-
 ENDCLASS.
