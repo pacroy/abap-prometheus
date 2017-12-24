@@ -35,7 +35,8 @@ CLASS ltcl_write_read_delete DEFINITION FINAL INHERITING FROM ltcl_base FOR TEST
   PRIVATE SECTION.
     METHODS:
       happy_path FOR TESTING RAISING cx_static_check,
-      increment FOR TESTING RAISING cx_static_check.
+      increment FOR TESTING RAISING cx_static_check,
+      test_mode FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 
@@ -69,6 +70,17 @@ CLASS ltcl_write_read_delete IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = '1' act = me->cut->read_single( 'TEST' ) ).
     me->cut->write_single( i_record = VALUE #( key = 'TEST' value = '$INC' ) ).
     cl_abap_unit_assert=>assert_equals( exp = '2' act = me->cut->read_single( 'TEST' ) ).
+  ENDMETHOD.
+
+  METHOD test_mode.
+    zcl_prometheus=>test_mode = abap_true.
+
+    me->cut->write_single( i_record = VALUE #( key = 'TEST' value = '5' ) ).
+    cl_abap_unit_assert=>assert_equals( exp = space act = me->cut->read_single( 'TEST' ) ).
+    me->cut->write_single( i_record = VALUE #( key = 'TEST' value = '$INC' ) ).
+    cl_abap_unit_assert=>assert_equals( exp = space act = me->cut->read_single( 'TEST' ) ).
+
+    zcl_prometheus=>test_mode = abap_false.
   ENDMETHOD.
 
 ENDCLASS.

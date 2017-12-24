@@ -12,6 +12,8 @@ CLASS zcl_prometheus DEFINITION
     ALIASES delete FOR zif_prometheus~delete.
     ALIASES get_metric_string FOR zif_prometheus~get_metric_string.
 
+    CLASS-DATA: test_mode TYPE abap_bool VALUE abap_false.
+
     CLASS-METHODS:
       class_constructor,
       get_instance
@@ -39,7 +41,15 @@ CLASS zcl_prometheus DEFINITION
         IMPORTING
           i_record TYPE zif_prometheus=>t_record
         CHANGING
-          c_data   TYPE zif_prometheus=>t_record_table.
+          c_data   TYPE zif_prometheus=>t_record_table,
+      detach
+        IMPORTING
+          i_shr_area TYPE REF TO zcl_shr_prometheus_area
+        RAISING
+          cx_shm_already_detached
+          cx_shm_completion_error
+          cx_shm_secondary_commit
+          cx_shm_wrong_handle.
 ENDCLASS.
 
 
@@ -175,7 +185,7 @@ CLASS zcl_prometheus IMPLEMENTATION.
       me->update_or_append( EXPORTING i_record = <record>  CHANGING c_data = shr_root->data ).
     ENDLOOP.
 
-    shr_area->detach_commit( ).
+    detach( shr_area ).
   ENDMETHOD.
 
 
@@ -187,6 +197,15 @@ CLASS zcl_prometheus IMPLEMENTATION.
     shr_root = CAST #( shr_area->get_root( ) ).
 
     me->update_or_append( EXPORTING i_record = i_record  CHANGING c_data = shr_root->data ).
-    shr_area->detach_commit( ).
+    detach( shr_area ).
   ENDMETHOD.
+
+  METHOD detach.
+    IF ( test_mode = abap_true ).
+      i_shr_area->detach_rollback( ).
+    ELSE.
+      i_shr_area->detach_commit( ).
+    ENDIF.
+  ENDMETHOD.
+
 ENDCLASS.
