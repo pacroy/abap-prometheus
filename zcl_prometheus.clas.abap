@@ -115,6 +115,7 @@ CLASS zcl_prometheus IMPLEMENTATION.
       ELSE.
         APPEND VALUE #( key = key value = condense( i_record-value ) ) TO c_data.
       ENDIF.
+      SORT c_data BY key.
     ENDIF.
   ENDMETHOD.
 
