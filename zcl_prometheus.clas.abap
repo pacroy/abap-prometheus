@@ -17,7 +17,7 @@ CLASS zcl_prometheus DEFINITION
     CLASS-METHODS:
       class_constructor,
       get_instance
-        IMPORTING i_root          TYPE string OPTIONAL
+        IMPORTING i_instance_name          TYPE string OPTIONAL
         RETURNING VALUE(r_result) TYPE REF TO zif_prometheus,
       get_instance_from_rest_request
         IMPORTING i_request       TYPE REF TO if_rest_request
@@ -27,7 +27,7 @@ CLASS zcl_prometheus DEFINITION
   PRIVATE SECTION.
     CLASS-DATA: instance TYPE REF TO zcl_prometheus.
 
-    DATA: root TYPE string.
+    DATA: instance_name TYPE string.
 
     METHODS: attach_for_update
       RETURNING VALUE(r_result) TYPE REF TO zcl_shr_prometheus_area
@@ -59,10 +59,10 @@ CLASS zcl_prometheus IMPLEMENTATION.
 
   METHOD attach_for_read.
     TRY.
-        r_result = zcl_shr_prometheus_area=>attach_for_read( inst_name = CONV #( me->root ) ).
+        r_result = zcl_shr_prometheus_area=>attach_for_read( inst_name = CONV #( me->instance_name ) ).
       CATCH cx_shm_no_active_version.
         WAIT UP TO 1 SECONDS.
-        r_result = zcl_shr_prometheus_area=>attach_for_read( inst_name = CONV #( me->root ) ).
+        r_result = zcl_shr_prometheus_area=>attach_for_read( inst_name = CONV #( me->instance_name ) ).
     ENDTRY.
   ENDMETHOD.
 
@@ -70,10 +70,10 @@ CLASS zcl_prometheus IMPLEMENTATION.
   METHOD attach_for_update.
     DATA wait TYPE i.
     TRY.
-        r_result = zcl_shr_prometheus_area=>attach_for_update( inst_name = CONV #( me->root ) ).
+        r_result = zcl_shr_prometheus_area=>attach_for_update( inst_name = CONV #( me->instance_name ) ).
       CATCH cx_shm_no_active_version.
         WAIT UP TO 1 SECONDS.
-        r_result = zcl_shr_prometheus_area=>attach_for_update( inst_name = CONV #( me->root ) ).
+        r_result = zcl_shr_prometheus_area=>attach_for_update( inst_name = CONV #( me->instance_name ) ).
     ENDTRY.
   ENDMETHOD.
 
@@ -84,10 +84,10 @@ CLASS zcl_prometheus IMPLEMENTATION.
 
 
   METHOD get_instance.
-    IF ( i_root IS NOT INITIAL ).
-      instance->root = i_root.
+    IF ( i_instance_name IS NOT INITIAL ).
+      instance->instance_name = i_instance_name.
     ELSE.
-      instance->root = cl_shm_area=>default_instance.
+      instance->instance_name = cl_shm_area=>default_instance.
     ENDIF.
     r_result = instance.
   ENDMETHOD.
@@ -96,9 +96,9 @@ CLASS zcl_prometheus IMPLEMENTATION.
   METHOD get_instance_from_rest_request.
     IF ( i_request IS BOUND ).
       DATA(segments) = i_request->get_uri_segments( ).
-      instance->root = to_upper( segments[ 1 ] ).
+      instance->instance_name = to_upper( segments[ 1 ] ).
     ELSE.
-      instance->root = cl_shm_area=>default_instance.
+      instance->instance_name = cl_shm_area=>default_instance.
     ENDIF.
     r_result = instance.
   ENDMETHOD.
