@@ -102,8 +102,11 @@ CLASS zcl_prometheus IMPLEMENTATION.
 
   METHOD set_instance_name_from_request.
     IF ( i_request IS BOUND ).
-      DATA(segments) = i_request->get_uri_segments( ).
-      instance->instance_name = to_upper( segments[ 1 ] ).
+      instance->instance_name = i_request->get_uri_query_parameter( 'instance' ).
+      IF ( instance->instance_name IS INITIAL ).
+        DATA(segments) = i_request->get_uri_segments( ).
+        instance->instance_name = to_upper( segments[ 1 ] ).
+      ENDIF.
     ELSE.
       instance->instance_name = cl_shm_area=>default_instance.
     ENDIF.

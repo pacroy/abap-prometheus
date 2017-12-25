@@ -27,7 +27,7 @@ CLASS ltcl_base IMPLEMENTATION.
 
 ENDCLASS.
 
-CLASS ltcl_write_read_delete DEFINITION FINAL INHERITING FROM ltcl_base FOR TESTING
+CLASS ltcl_basic DEFINITION FINAL INHERITING FROM ltcl_base FOR TESTING
   DURATION SHORT
   RISK LEVEL HARMLESS.
 
@@ -36,11 +36,12 @@ CLASS ltcl_write_read_delete DEFINITION FINAL INHERITING FROM ltcl_base FOR TEST
       happy_path FOR TESTING RAISING cx_static_check,
       increment FOR TESTING RAISING cx_static_check,
       test_mode FOR TESTING RAISING cx_static_check,
-      set_instance_name_from_request FOR TESTING RAISING cx_static_check.
+      set_inst_frm_req_no_query FOR TESTING RAISING cx_static_check,
+      set_inst_frm_req_with_query FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 
-CLASS ltcl_write_read_delete IMPLEMENTATION.
+CLASS ltcl_basic IMPLEMENTATION.
 
   METHOD happy_path.
     zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST{id="1"}' value = '123456' ) ).
@@ -83,14 +84,29 @@ CLASS ltcl_write_read_delete IMPLEMENTATION.
     zcl_prometheus=>test_mode = abap_false.
   ENDMETHOD.
 
-  METHOD set_instance_name_from_request.
+  METHOD set_inst_frm_req_no_query.
     DATA(rest_request) = CAST if_rest_request( cl_abap_testdouble=>create( 'IF_REST_REQUEST' ) ) ##NO_TEXT.
+    cl_abap_testdouble=>configure_call( rest_request )->returning( `` ).
+    rest_request->get_uri_query_parameter( 'instance' ).
     cl_abap_testdouble=>configure_call( rest_request )->returning( VALUE string_table( ( `FIRST` ) ( `SECOND` ) ( `THIRD` ) ) ).
     rest_request->get_uri_segments( ).
 
     zcl_prometheus=>set_instance_name_from_request( rest_request ).
 
     cl_abap_unit_assert=>assert_equals( exp = 'FIRST' act = zcl_prometheus=>instance->instance_name ).
+  ENDMETHOD.
+
+  METHOD set_inst_frm_req_with_query.
+    DATA(rest_request) = CAST if_rest_request( cl_abap_testdouble=>create( 'IF_REST_REQUEST' ) ) ##NO_TEXT.
+    cl_abap_testdouble=>configure_call( rest_request )->returning( `INSTANCE` ).
+    rest_request->get_uri_query_parameter( 'instance' ).
+    cl_abap_testdouble=>configure_call( rest_request )->and_expect( )->is_never_called( ).
+    rest_request->get_uri_segments( ).
+
+    zcl_prometheus=>set_instance_name_from_request( rest_request ).
+
+    cl_abap_unit_assert=>assert_equals( exp = 'INSTANCE' act = zcl_prometheus=>instance->instance_name ).
+    cl_abap_testdouble=>verify_expectations(  rest_request ).
   ENDMETHOD.
 
 ENDCLASS.
