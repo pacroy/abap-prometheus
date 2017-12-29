@@ -16,9 +16,9 @@ CLASS zcl_prometheus DEFINITION
 
     CLASS-METHODS:
       class_constructor,
-      set_instance_name
+      set_instance
         IMPORTING i_instance_name TYPE string OPTIONAL,
-      set_instance_name_from_request
+      set_instance_from_request
         IMPORTING i_request TYPE REF TO if_rest_request.
 
   PROTECTED SECTION.
@@ -53,7 +53,7 @@ ENDCLASS.
 
 
 
-CLASS zcl_prometheus IMPLEMENTATION.
+CLASS ZCL_PROMETHEUS IMPLEMENTATION.
 
 
   METHOD attach_for_read.
@@ -91,7 +91,7 @@ CLASS zcl_prometheus IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD set_instance_name.
+  METHOD set_instance.
     IF ( i_instance_name IS NOT INITIAL ).
       instance->instance_name = i_instance_name.
     ELSE.
@@ -100,12 +100,15 @@ CLASS zcl_prometheus IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD set_instance_name_from_request.
+  METHOD set_instance_from_request.
     IF ( i_request IS BOUND ).
-      instance->instance_name = i_request->get_uri_query_parameter( 'instance' ).
+      instance->instance_name = i_request->get_uri_attribute( 'instance' ).
       IF ( instance->instance_name IS INITIAL ).
-        DATA(segments) = i_request->get_uri_segments( ).
-        instance->instance_name = to_upper( segments[ 1 ] ).
+        instance->instance_name = i_request->get_uri_query_parameter( 'instance' ).
+        IF ( instance->instance_name IS INITIAL ).
+          DATA(segments) = i_request->get_uri_segments( ).
+          instance->instance_name = to_upper( segments[ 1 ] ).
+        ENDIF.
       ENDIF.
     ELSE.
       instance->instance_name = cl_shm_area=>default_instance.
