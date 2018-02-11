@@ -30,7 +30,12 @@ CLASS zcl_shr_prometheus_root DEFINITION
       get_metric
         IMPORTING i_key           TYPE string
         RETURNING VALUE(r_metric) TYPE t_key_value
-        RAISING   zcx_prometheus.
+        RAISING   zcx_prometheus,
+      update_or_add_metric
+        IMPORTING i_metric TYPE t_key_value
+        RAISING   zcx_prometheus,
+      get_metric_table
+        RETURNING VALUE(r_metric_table) TYPE t_key_value_table.
 
   PROTECTED SECTION.
   PRIVATE SECTION.
@@ -39,7 +44,7 @@ ENDCLASS.
 
 
 
-CLASS ZCL_SHR_PROMETHEUS_ROOT IMPLEMENTATION.
+CLASS zcl_shr_prometheus_root IMPLEMENTATION.
 
 
   METHOD add_metric.
@@ -95,4 +100,19 @@ CLASS ZCL_SHR_PROMETHEUS_ROOT IMPLEMENTATION.
       RAISE EXCEPTION TYPE zcx_prometheus.
     ENDIF.
   ENDMETHOD.
+
+
+  METHOD update_or_add_metric.
+    TRY.
+        update_metric( i_metric ).
+      CATCH zcx_prometheus.
+        add_metric( i_metric ).
+    ENDTRY.
+  ENDMETHOD.
+
+
+  METHOD get_metric_table.
+    r_metric_table = metric_table.
+  ENDMETHOD.
+
 ENDCLASS.

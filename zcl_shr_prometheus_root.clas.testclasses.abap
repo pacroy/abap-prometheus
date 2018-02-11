@@ -29,7 +29,8 @@ CLASS ltcl_test DEFINITION FINAL INHERITING FROM ltcl_base FOR TESTING
   PRIVATE SECTION.
     METHODS:
       happy_path FOR TESTING RAISING cx_static_check,
-      exceptions FOR TESTING RAISING cx_static_check.
+      exceptions FOR TESTING RAISING cx_static_check,
+      update_or_add FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 
@@ -38,26 +39,26 @@ CLASS ltcl_test IMPLEMENTATION.
   METHOD happy_path.
     DATA(metric1) = VALUE cut->t_key_value( key = `KEY1` value = `VALUE1` ).
     cut->add_metric( metric1 ).
-    cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( cut->metric_table ) ).
+    cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( cut->get_metric_table( ) ) ).
     cl_abap_unit_assert=>assert_equals( exp = metric1 act = cut->get_metric( `KEY1` ) ).
 
     DATA(metric2) = VALUE cut->t_key_value( key = `KEY2` value = `VALUE2` ).
     cut->add_metric( metric2 ).
-    cl_abap_unit_assert=>assert_equals( exp = 2 act = lines( cut->metric_table ) ).
+    cl_abap_unit_assert=>assert_equals( exp = 2 act = lines( cut->get_metric_table( ) ) ).
     cl_abap_unit_assert=>assert_equals( exp = metric1 act = cut->get_metric( `KEY1` ) ).
     cl_abap_unit_assert=>assert_equals( exp = metric2 act = cut->get_metric( `KEY2` ) ).
 
     DATA(metric3) = VALUE cut->t_key_value( key = `KEY3` value = `VALUE3` ).
     cut->add_metric( metric3 ).
-    cl_abap_unit_assert=>assert_equals( exp = 3 act = lines( cut->metric_table ) ).
+    cl_abap_unit_assert=>assert_equals( exp = 3 act = lines( cut->get_metric_table( ) ) ).
 
     DATA(metric4) = VALUE cut->t_key_value( key = `KEY2` value = `VALUE2MOD` ).
     cut->update_metric( metric4 ).
-    cl_abap_unit_assert=>assert_equals( exp = 3 act = lines( cut->metric_table ) ).
+    cl_abap_unit_assert=>assert_equals( exp = 3 act = lines( cut->get_metric_table( ) ) ).
     cl_abap_unit_assert=>assert_equals( exp = metric4 act = cut->get_metric( `KEY2` ) ).
 
     cut->remove_metric( `KEY1` ).
-    cl_abap_unit_assert=>assert_equals( exp = 2 act = lines( cut->metric_table ) ).
+    cl_abap_unit_assert=>assert_equals( exp = 2 act = lines( cut->get_metric_table( ) ) ).
     TRY.
         cut->get_metric( `KEY1` ).
         cl_abap_unit_assert=>fail( 'ZCX_PROMETHEUS not raised' ).
@@ -65,7 +66,7 @@ CLASS ltcl_test IMPLEMENTATION.
     ENDTRY.
 
     cut->clear_all_metrics( ).
-    cl_abap_unit_assert=>assert_initial( cut->metric_table ).
+    cl_abap_unit_assert=>assert_initial( cut->get_metric_table( ) ).
   ENDMETHOD.
 
   METHOD exceptions.
@@ -78,7 +79,7 @@ CLASS ltcl_test IMPLEMENTATION.
         cl_abap_unit_assert=>fail( 'ZCX_PROMETHEUS not raised' ).
       CATCH zcx_prometheus.
     ENDTRY.
-    cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( cut->metric_table ) ).
+    cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( cut->get_metric_table( ) ) ).
     cl_abap_unit_assert=>assert_equals( exp = metric1 act = cut->get_metric( `KEY1` ) ).
 
     DATA(metric3) = VALUE cut->t_key_value( key = `KEY3` value = `VALUE3` ).
@@ -87,7 +88,7 @@ CLASS ltcl_test IMPLEMENTATION.
         cl_abap_unit_assert=>fail( 'ZCX_PROMETHEUS not raised' ).
       CATCH zcx_prometheus.
     ENDTRY.
-    cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( cut->metric_table ) ).
+    cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( cut->get_metric_table( ) ) ).
     cl_abap_unit_assert=>assert_equals( exp = metric1 act = cut->get_metric( `KEY1` ) ).
 
     TRY.
@@ -95,6 +96,19 @@ CLASS ltcl_test IMPLEMENTATION.
         cl_abap_unit_assert=>fail( 'ZCX_PROMETHEUS not raised' ).
       CATCH zcx_prometheus.
     ENDTRY.
+  ENDMETHOD.
+
+  METHOD update_or_add.
+    DATA(metric1) = VALUE cut->t_key_value( key = `KEY1` value = `VALUE1` ).
+    cut->add_metric( metric1 ).
+    DATA(metric2) = VALUE cut->t_key_value( key = `KEY2` value = `VALUE2` ).
+    cut->update_or_add_metric( metric2 ).
+    DATA(metric3) = VALUE cut->t_key_value( key = `KEY1` value = `VALUE3` ).
+    cut->update_or_add_metric( metric3 ).
+
+    cl_abap_unit_assert=>assert_equals( exp = 2 act = lines( cut->get_metric_table( ) ) ).
+    cl_abap_unit_assert=>assert_equals( exp = metric3 act = cut->get_metric( `KEY1` ) ).
+    cl_abap_unit_assert=>assert_equals( exp = metric2 act = cut->get_metric( `KEY2` ) ).
   ENDMETHOD.
 
 ENDCLASS.
