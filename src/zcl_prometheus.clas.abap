@@ -67,7 +67,6 @@ CLASS ZCL_PROMETHEUS IMPLEMENTATION.
 
 
   METHOD attach_for_update.
-    DATA wait TYPE i.
     TRY.
         r_result = zcl_shr_prometheus_area=>attach_for_update( inst_name = CONV #( instance->instance_name ) ).
       CATCH cx_shm_no_active_version.
