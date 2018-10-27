@@ -45,51 +45,116 @@ ENDCLASS.
 CLASS ltcl_basic IMPLEMENTATION.
 
   METHOD happy_path.
-    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST{id="1"}' value = '123456' ) ).
-    zcl_prometheus=>write_single( i_record = VALUE #( key = 'test{id="1"}' value = '123000' ) ).
+    DATA record         TYPE zif_prometheus=>t_modify_record.
+    DATA record_table   TYPE zif_prometheus=>t_modify_record_table.
+    DATA records        TYPE zif_prometheus=>t_record_table.
+    DATA metric_str     TYPE string.
+
+    record-key    = 'TEST{id="1"}'.
+    record-value  = '123456'.
+    zcl_prometheus=>write_single( i_record = record ).
+
+    record-key    = 'test{id="1"}'.
+    record-value  = '123000'.
+    zcl_prometheus=>write_single( i_record = record ).
+
     cl_abap_unit_assert=>assert_equals( exp = '123000' act = zcl_prometheus=>read_single( 'TEST{id="1"}' ) ).
 
-    zcl_prometheus=>write_multiple( VALUE #( ( key = 'TEST{id="2"}' value = '456789' )
-                                      ( key = 'TEST{id="3"}' value = '789123' ) ) ).
-    DATA(records) = zcl_prometheus=>read_all( ).
-    cl_abap_unit_assert=>assert_table_not_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="1"}' value = '123456' ) ).
-    cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="1"}' value = '123000' ) ).
-    cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="2"}' value = '456789' ) ).
-    cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="3"}' value = '789123' ) ).
+    record-key    = 'TEST{id="2"}'.
+    record-value  = '456789'.
+    APPEND record TO record_table.
+
+    record-key    = 'TEST{id="3"}'.
+    record-value  = '789123'.
+    APPEND record TO record_table.
+
+    zcl_prometheus=>write_multiple( record_table ).
+
+    records = zcl_prometheus=>read_all( ).
+
+    record-key    = 'test{id="1"}'.
+    record-value  = '123456'.
+    cl_abap_unit_assert=>assert_table_not_contains( table = records line = record ).
+
+    record-key    = 'test{id="1"}'.
+    record-value  = '123000'.
+    cl_abap_unit_assert=>assert_table_contains( table = records line = records ).
+
+    record-key    = 'test{id="2"}'.
+    record-value  = '456789'.
+    cl_abap_unit_assert=>assert_table_contains( table = records line = records ).
+
+    record-key    = 'test{id="3"}'.
+    record-value  = '789123'.
+    cl_abap_unit_assert=>assert_table_contains( table = records line = records ).
 
     zcl_prometheus=>delete( 'test{id="2"}' ).
     records = zcl_prometheus=>read_all( ).
-    cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="1"}' value = '123000' ) ).
-    cl_abap_unit_assert=>assert_table_not_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="2"}' value = '456789' ) ).
-    cl_abap_unit_assert=>assert_table_contains( table = records line = VALUE zif_prometheus=>t_record( key = 'test{id="3"}' value = '789123' ) ).
 
-    DATA(metric_str) = |test\{id="1"\} 123000\r\ntest\{id="3"\} 789123\r\n|.
+    record-key    = 'test{id="1"}'.
+    record-value  = '123000'.
+    cl_abap_unit_assert=>assert_table_contains( table = records line = record ).
+
+    record-key    = 'test{id="2"}'.
+    record-value  = '456789'.
+    cl_abap_unit_assert=>assert_table_not_contains( table = records line = record ).
+
+    record-key    = 'test{id="3"}'.
+    record-value  = '789123'.
+    cl_abap_unit_assert=>assert_table_contains( table = records line = record ).
+
+    metric_str = |test\{id="1"\} 123000\r\ntest\{id="3"\} 789123\r\n|.
     cl_abap_unit_assert=>assert_equals( exp = metric_str act = zcl_prometheus=>get_metric_string( ) ).
   ENDMETHOD.
 
   METHOD increment.
-    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST' value = '1' command = zif_prometheus=>c_command-increment ) ).
+    DATA record         TYPE zif_prometheus=>t_modify_record.
+
+    record-key    = 'TEST'.
+    record-value  = '1'.
+    record-command = zif_prometheus=>c_command-increment.
+    zcl_prometheus=>write_single( i_record = record ).
     cl_abap_unit_assert=>assert_equals( exp = '1' act = zcl_prometheus=>read_single( 'TEST' ) ).
-    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST' value = '2' command = zif_prometheus=>c_command-increment ) ).
+
+    record-key    = 'TEST'.
+    record-value  = '2'.
+    record-command = zif_prometheus=>c_command-increment.
+    zcl_prometheus=>write_single( i_record = record ).
     cl_abap_unit_assert=>assert_equals( exp = '3' act = zcl_prometheus=>read_single( 'TEST' ) ).
+
   ENDMETHOD.
 
   METHOD test_mode.
+    DATA record         TYPE zif_prometheus=>t_modify_record.
+
     zcl_prometheus=>test_mode = abap_true.
 
-    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST' value = '5' ) ).
+    record-key    = 'TEST'.
+    record-value  = '5'.
+    zcl_prometheus=>write_single( i_record = record ).
     cl_abap_unit_assert=>assert_equals( exp = space act = zcl_prometheus=>read_single( 'TEST' ) ).
-    zcl_prometheus=>write_single( i_record = VALUE #( key = 'TEST' value = '1' command = zif_prometheus=>c_command-increment ) ).
+
+    record-key    = 'TEST'.
+    record-value  = '1'.
+    record-command = zif_prometheus=>c_command-increment.
+    zcl_prometheus=>write_single( i_record = record ).
     cl_abap_unit_assert=>assert_equals( exp = space act = zcl_prometheus=>read_single( 'TEST' ) ).
 
     zcl_prometheus=>test_mode = abap_false.
   ENDMETHOD.
 
   METHOD set_inst_from_attr.
-    DATA(rest_request) = CAST if_rest_request( cl_abap_testdouble=>create( 'IF_REST_REQUEST' ) ) ##NO_TEXT.
+    DATA rest_request   TYPE REF TO if_rest_request.
+    DATA string_table   TYPE string_table.
+
+    rest_request ?= cl_abap_testdouble=>create( 'IF_REST_REQUEST' )  ##no_text.
     cl_abap_testdouble=>configure_call( rest_request )->returning( `ATTRIBUTE` ).
     rest_request->get_uri_attribute( 'instance' ).
-    cl_abap_testdouble=>configure_call( rest_request )->returning( VALUE string_table( ( `FIRST` ) ( `SECOND` ) ( `THIRD` ) ) ).
+
+    APPEND `FIRST`  TO string_table.
+    APPEND `SECOND` TO string_table.
+    APPEND `THIRD`  TO string_table.
+    cl_abap_testdouble=>configure_call( rest_request )->returning( string_table ).
     rest_request->get_uri_segments( ).
 
     zcl_prometheus=>set_instance_from_request( rest_request ).
@@ -98,12 +163,19 @@ CLASS ltcl_basic IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD set_inst_from_query.
-    DATA(rest_request) = CAST if_rest_request( cl_abap_testdouble=>create( 'IF_REST_REQUEST' ) ) ##NO_TEXT.
+    DATA rest_request   TYPE REF TO if_rest_request.
+    DATA string_table   TYPE string_table.
+
+    rest_request ?= cl_abap_testdouble=>create( 'IF_REST_REQUEST' ) ##no_text.
     cl_abap_testdouble=>configure_call( rest_request )->returning( `` ).
     rest_request->get_uri_attribute( 'instance' ).
     cl_abap_testdouble=>configure_call( rest_request )->returning( `QUERY` ).
     rest_request->get_uri_query_parameter( 'instance' ).
-    cl_abap_testdouble=>configure_call( rest_request )->returning( VALUE string_table( ( `FIRST` ) ( `SECOND` ) ( `THIRD` ) ) ).
+
+    APPEND `FIRST`  TO string_table.
+    APPEND `SECOND` TO string_table.
+    APPEND `THIRD`  TO string_table.
+    cl_abap_testdouble=>configure_call( rest_request )->returning( string_table ).
     rest_request->get_uri_segments( ).
 
     zcl_prometheus=>set_instance_from_request( rest_request ).
@@ -113,12 +185,19 @@ CLASS ltcl_basic IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD set_inst_from_unspecified.
-    DATA(rest_request) = CAST if_rest_request( cl_abap_testdouble=>create( 'IF_REST_REQUEST' ) ) ##NO_TEXT.
+    DATA rest_request   TYPE REF TO if_rest_request.
+    DATA string_table   TYPE string_table.
+
+    rest_request ?= cl_abap_testdouble=>create( 'IF_REST_REQUEST' ) ##no_text.
     cl_abap_testdouble=>configure_call( rest_request )->returning( `` ).
     rest_request->get_uri_attribute( 'instance' ).
     cl_abap_testdouble=>configure_call( rest_request )->returning( `` ).
     rest_request->get_uri_query_parameter( 'instance' ).
-    cl_abap_testdouble=>configure_call( rest_request )->returning( VALUE string_table( ( `FIRST` ) ( `SECOND` ) ( `THIRD` ) ) ).
+
+    APPEND `FIRST`  TO string_table.
+    APPEND `SECOND` TO string_table.
+    APPEND `THIRD`  TO string_table.
+    cl_abap_testdouble=>configure_call( rest_request )->returning( string_table ).
     rest_request->get_uri_segments( ).
 
     zcl_prometheus=>set_instance_from_request( rest_request ).

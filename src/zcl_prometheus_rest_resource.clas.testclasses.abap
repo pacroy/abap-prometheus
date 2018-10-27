@@ -18,24 +18,24 @@ ENDCLASS.
 CLASS ltcl_base IMPLEMENTATION.
 
   METHOD setup.
-    me->cut = NEW #( ).
+    CREATE OBJECT me->cut.
   ENDMETHOD.
 
 ENDCLASS.
 
-class ltcl_get definition final inheriting from ltcl_base for testing
-  duration short
-  risk level harmless.
+CLASS ltcl_get DEFINITION FINAL INHERITING FROM ltcl_base FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
 
-  private section.
-    methods:
-      happy_path for testing raising cx_static_check.
-endclass.
+  PRIVATE SECTION.
+    METHODS:
+      happy_path FOR TESTING RAISING cx_static_check.
+ENDCLASS.
 
 
-class ltcl_get implementation.
+CLASS ltcl_get IMPLEMENTATION.
 
-  method happy_path.
-  endmethod.
+  METHOD happy_path.
+  ENDMETHOD.
 
-endclass.
+ENDCLASS.
