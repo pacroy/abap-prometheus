@@ -8,7 +8,7 @@ class ZCL_SHR_PROMETHEUS_AREA definition
 
 public section.
 
-  constants AREA_NAME type SHM_AREA_NAME value 'ZCL_SHR_PROMETHEUS_AREA' ##NO_TEXT.
+  constants AREA_NAME type SHM_AREA_NAME value 'ZCL_SHR_PROMETHEUS_AREA'. "#EC NOTEXT
   data ROOT type ref to ZCL_SHR_PROMETHEUS_ROOT read-only .
 
   class-methods CLASS_CONSTRUCTOR .
@@ -125,12 +125,12 @@ public section.
 protected section.
 private section.
 
-  constants _VERSION_ type I value 23 ##NO_TEXT.
+  constants _VERSION_ type I value 21. "#EC NOTEXT
   class-data _TRACE_SERVICE type ref to IF_SHM_TRACE .
-  class-data _TRACE_ACTIVE type ABAP_BOOL value ABAP_FALSE ##NO_TEXT.
-  constants _TRANSACTIONAL type ABAP_BOOL value ABAP_FALSE ##NO_TEXT.
-  constants _CLIENT_DEPENDENT type ABAP_BOOL value ABAP_TRUE ##NO_TEXT.
-  constants _LIFE_CONTEXT type SHM_LIFE_CONTEXT value CL_SHM_AREA=>LIFE_CONTEXT_APPSERVER ##NO_TEXT.
+  class-data _TRACE_ACTIVE type ABAP_BOOL value ABAP_FALSE. "#EC NOTEXT
+  constants _TRANSACTIONAL type ABAP_BOOL value ABAP_FALSE. "#EC NOTEXT
+  constants _CLIENT_DEPENDENT type ABAP_BOOL value ABAP_TRUE. "#EC NOTEXT
+  constants _LIFE_CONTEXT type SHM_LIFE_CONTEXT value CL_SHM_AREA=>LIFE_CONTEXT_APPSERVER. "#EC NOTEXT
 ENDCLASS.
 
 
@@ -138,7 +138,7 @@ ENDCLASS.
 CLASS ZCL_SHR_PROMETHEUS_AREA IMPLEMENTATION.
 
 
-  method ATTACH_FOR_READ.
+method ATTACH_FOR_READ.
 
   DATA:
     l_attributes       TYPE shma_attributes,
@@ -251,10 +251,10 @@ CLASS ZCL_SHR_PROMETHEUS_AREA IMPLEMENTATION.
   handle->inst_trace_service = _trace_service.
   handle->inst_trace_active  = _trace_active.
 
-  endmethod.
+endmethod.
 
 
-  method ATTACH_FOR_UPDATE.
+method ATTACH_FOR_UPDATE.
 
   DATA:
     l_attributes             TYPE shma_attributes,
@@ -474,10 +474,10 @@ CLASS ZCL_SHR_PROMETHEUS_AREA IMPLEMENTATION.
   handle->inst_trace_service = _trace_service.
   handle->inst_trace_active  = _trace_active.
 
-  endmethod.
+endmethod.
 
 
-  method ATTACH_FOR_WRITE.
+method ATTACH_FOR_WRITE.
 
   DATA:
     l_attributes             TYPE shma_attributes,
@@ -650,10 +650,10 @@ CLASS ZCL_SHR_PROMETHEUS_AREA IMPLEMENTATION.
   handle->inst_trace_service = _trace_service.
   handle->inst_trace_active  = _trace_active.
 
-  endmethod.
+endmethod.
 
 
-  method BUILD.
+method BUILD.
 
   DATA:
     l_cls_name TYPE shm_auto_build_class_name,
@@ -698,10 +698,10 @@ CLASS ZCL_SHR_PROMETHEUS_AREA IMPLEMENTATION.
 
   ENDIF.
 
-  endmethod.
+endmethod.
 
 
-  method CLASS_CONSTRUCTOR.
+method CLASS_CONSTRUCTOR.
 
 * TRACE { DO NOT REMOVE THIS LINE !
   _trace_active = abap_false.
@@ -719,10 +719,10 @@ CLASS ZCL_SHR_PROMETHEUS_AREA IMPLEMENTATION.
   ENDTRY.
 * TRACE } DO NOT REMOVE THIS LINE !
 
-  endmethod.
+endmethod.
 
 
-  method DETACH_AREA.
+method DETACH_AREA.
 
   DATA:
     l_client TYPE shm_client,
@@ -749,10 +749,10 @@ CLASS ZCL_SHR_PROMETHEUS_AREA IMPLEMENTATION.
     ENDIF.
   ENDIF.
 
-  endmethod.
+endmethod.
 
 
-  method FREE_AREA.
+method FREE_AREA.
 
   DATA:
     l_client TYPE shm_client,
@@ -786,10 +786,10 @@ CLASS ZCL_SHR_PROMETHEUS_AREA IMPLEMENTATION.
     ENDIF.
   ENDIF.
 
-  endmethod.
+endmethod.
 
 
-  method FREE_INSTANCE.
+method FREE_INSTANCE.
 
   DATA:
     l_client TYPE shm_client,
@@ -825,15 +825,15 @@ CLASS ZCL_SHR_PROMETHEUS_AREA IMPLEMENTATION.
     ENDIF.
   ENDIF.
 
-  endmethod.
+endmethod.
 
 
-  method GET_GENERATOR_VERSION.
+method GET_GENERATOR_VERSION.
   generator_version = _version_.
-  endmethod.
+endmethod.
 
 
-  method GET_INSTANCE_INFOS.
+method GET_INSTANCE_INFOS.
 
   DATA:
     l_client             TYPE shm_client,
@@ -878,17 +878,16 @@ CLASS ZCL_SHR_PROMETHEUS_AREA IMPLEMENTATION.
     IF _trace_service->variant-get_instance_inf = abap_true.
       _trace_service->trin_get_instance_infos(
         area_name         = area_name
-        inst_name         = inst_name
         client            = l_client
         infos             = infos
       ).
     ENDIF.
   ENDIF.
 
-  endmethod.
+endmethod.
 
 
-  method GET_ROOT.
+method GET_ROOT.
 
   DATA:
     l_cx        TYPE REF TO cx_root,
@@ -944,10 +943,10 @@ CLASS ZCL_SHR_PROMETHEUS_AREA IMPLEMENTATION.
 
   ENDIF.
 
-  endmethod.
+endmethod.
 
 
-  method INVALIDATE_AREA.
+method INVALIDATE_AREA.
 
   DATA:
     l_client TYPE shm_client,
@@ -981,10 +980,10 @@ CLASS ZCL_SHR_PROMETHEUS_AREA IMPLEMENTATION.
     ENDIF.
   ENDIF.
 
-  endmethod.
+endmethod.
 
 
-  method INVALIDATE_INSTANCE.
+method INVALIDATE_INSTANCE.
 
   DATA:
     l_client TYPE shm_client,
@@ -1022,10 +1021,10 @@ CLASS ZCL_SHR_PROMETHEUS_AREA IMPLEMENTATION.
     ENDIF.
   ENDIF.
 
-  endmethod.
+endmethod.
 
 
-  method SET_ROOT.
+method SET_ROOT.
 
   DATA:
     l_cx TYPE REF TO cx_root.
@@ -1063,5 +1062,5 @@ CLASS ZCL_SHR_PROMETHEUS_AREA IMPLEMENTATION.
 
   ENDIF.
 
-  endmethod.
+endmethod.
 ENDCLASS.
