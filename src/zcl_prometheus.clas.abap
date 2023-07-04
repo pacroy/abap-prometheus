@@ -160,7 +160,7 @@ CLASS ZCL_PROMETHEUS IMPLEMENTATION.
   METHOD zif_prometheus~get_metric_string.
     DATA(records) = read_all( ).
     LOOP AT records ASSIGNING FIELD-SYMBOL(<record>).
-      r_result = r_result && |{ <record>-key } { <record>-value }\r\n|.
+      r_result = r_result && |{ <record>-key } { <record>-value }\n|.
     ENDLOOP.
   ENDMETHOD.
 
